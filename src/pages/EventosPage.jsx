@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { subscribeEventos, subscribeCategorias } from '../data/prensaFirebase'
-import { EventoCard, PageHero, LoadingSpinner } from '../assets/components/Layout'
+import { EventoCard, LoadingSpinner } from '../assets/components/Layout'
 
 export default function EventosPage() {
   const [eventos, setEventos] = useState([])
@@ -32,10 +32,13 @@ export default function EventosPage() {
 
   return (
     <>
-      <PageHero
-        titulo="Eventos"
-        descripcion="Calendario de eventos, actividades y fechas importantes de la Municipalidad de Eldorado."
-      />
+      {/* Header */}
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-6 py-8 md:py-10">
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Eventos</h1>
+          <p className="text-sm text-slate-500 mt-1">Calendario de eventos, actividades y fechas importantes de la Municipalidad de Eldorado.</p>
+        </div>
+      </div>
 
       <section className="max-w-7xl mx-auto px-6 py-8">
         {/* Filtros */}
@@ -43,29 +46,33 @@ export default function EventosPage() {
           <select
             value={filtroCategoria}
             onChange={e => setFiltroCategoria(e.target.value)}
-            className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-600 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"
+            className="px-4 py-2 bg-white border border-slate-200 text-sm font-medium text-slate-600 focus:ring-2 focus:ring-sky-500 outline-none"
+            style={{ borderRadius: '5px' }}
           >
             <option value="todas">Todas las categorías</option>
             {categorias.map(cat => (
               <option key={cat.id} value={cat.id}>{cat.nombre.replace('Secretaría de ', 'Secretaría de ')}</option>
             ))}
           </select>
-          <div className="flex bg-white rounded-xl border border-slate-200 p-1">
+          <div className="flex bg-white border border-slate-200 p-0.5" style={{ borderRadius: '5px' }}>
             <button
               onClick={() => setFiltroEstado('proximos')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${filtroEstado === 'proximos' ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-3.5 py-1.5 text-xs font-semibold transition-colors ${filtroEstado === 'proximos' ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              style={{ borderRadius: '4px' }}
             >
               Próximos
             </button>
             <button
               onClick={() => setFiltroEstado('pasados')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${filtroEstado === 'pasados' ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-3.5 py-1.5 text-xs font-semibold transition-colors ${filtroEstado === 'pasados' ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              style={{ borderRadius: '4px' }}
             >
               Pasados
             </button>
             <button
               onClick={() => setFiltroEstado('todos')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${filtroEstado === 'todos' ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-3.5 py-1.5 text-xs font-semibold transition-colors ${filtroEstado === 'todos' ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              style={{ borderRadius: '4px' }}
             >
               Todos
             </button>

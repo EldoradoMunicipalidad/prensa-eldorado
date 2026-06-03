@@ -36,7 +36,7 @@ export default function CategoriaPage() {
         titulo={categoria.nombre}
         descripcion={`Noticias y artículos de ${categoria.nombre}`}
       />
-      <section className="max-w-7xl mx-auto px-6 py-12">
+      <section className="max-w-7xl mx-auto px-6 py-10">
         {filtrados.length === 0 ? (
           <div className="text-center py-16 text-slate-400">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-4 opacity-30">
@@ -47,10 +47,10 @@ export default function CategoriaPage() {
           </div>
         ) : (
           <>
-            <p className="text-sm text-slate-400 mb-6">{filtrados.length} artículo{filtrados.length !== 1 ? 's' : ''} publicado{filtrados.length !== 1 ? 's' : ''}</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <p className="text-sm text-slate-400 mb-4">{filtrados.length} artículo{filtrados.length !== 1 ? 's' : ''} publicado{filtrados.length !== 1 ? 's' : ''}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtrados.map(art => (
-                <ArticleCard key={art.id} articulo={art} onClick={() => navigate(`/articulo/${art.slug}`)} />
+                <ArticleCard key={art.id} articulo={art} variant="compact" onClick={() => navigate(`/articulo/${art.slug}`)} />
               ))}
             </div>
           </>

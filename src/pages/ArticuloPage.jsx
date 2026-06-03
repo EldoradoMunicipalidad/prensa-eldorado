@@ -50,14 +50,7 @@ export default function ArticuloPage() {
     )
   }
 
-  const catColors = {
-    gobierno: 'bg-sky-100 text-sky-700',
-    hacienda: 'bg-emerald-100 text-emerald-700',
-    'obras-publicas': 'bg-amber-100 text-amber-700',
-    ambiente: 'bg-green-100 text-green-700',
-    produccion: 'bg-violet-100 text-violet-700',
-    'accion-social': 'bg-rose-100 text-rose-700',
-  }
+  const catColor = articulo.categoriaColor || '#0EA5E9'
 
   return (
     <article className="max-w-4xl mx-auto px-6 py-12">
@@ -77,7 +70,10 @@ export default function ArticuloPage() {
       {/* Header */}
       <div className="mb-8">
         {categoria && (
-          <span className={`text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider inline-block mb-4 ${catColors[articulo.categoria] || 'bg-slate-100 text-slate-600'}`}>
+          <span
+            className="text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider inline-block mb-4 text-white"
+            style={{ backgroundColor: catColor }}
+          >
             {categoria.nombre}
           </span>
         )}
@@ -133,7 +129,7 @@ export default function ArticuloPage() {
           <h2 className="text-xl font-bold text-slate-800 mb-6">Artículos Relacionados</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {relacionados.map(art => {
-              const catColor = catColors[art.categoria] || 'bg-slate-100 text-slate-600'
+              const relCatColor = art.categoriaColor || '#0EA5E9'
               return (
                 <div
                   key={art.id}
@@ -145,8 +141,11 @@ export default function ArticuloPage() {
                       <img src={art.imagen} alt={art.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                     </div>
                   )}
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${catColor}`}>
-                    {categoria?.nombre || art.categoria}
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider text-white"
+                    style={{ backgroundColor: relCatColor }}
+                  >
+                    {art.categoriaNombre || art.categoria}
                   </span>
                   <h3 className="font-semibold text-slate-800 mt-2 line-clamp-2 group-hover:text-sky-600 transition-colors">{art.titulo}</h3>
                 </div>

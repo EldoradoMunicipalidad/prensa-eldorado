@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { subscribeCategorias, saveCategoria, deleteCategoria, DEFAULT_CATEGORIES } from '../../data/prensaFirebase'
+import { subscribeCategorias, saveCategoria, deleteCategoria } from '../../data/prensaFirebase'
 
 export default function AdminCategorias() {
   const navigate = useNavigate()
@@ -26,17 +26,11 @@ export default function AdminCategorias() {
     setDeleteConfirm(null)
   }
 
-  const COLORS = [
-    { value: 'bg-sky-500', label: 'Celeste' },
-    { value: 'bg-emerald-500', label: 'Verde' },
-    { value: 'bg-amber-500', label: 'Ámbar' },
-    { value: 'bg-green-500', label: 'Verde oscuro' },
-    { value: 'bg-violet-500', label: 'Violeta' },
-    { value: 'bg-rose-500', label: 'Rosa' },
-    { value: 'bg-cyan-500', label: 'Cian' },
-    { value: 'bg-indigo-500', label: 'Índigo' },
-    { value: 'bg-pink-500', label: 'Rosa fuerte' },
-    { value: 'bg-orange-500', label: 'Naranja' },
+  const PRESET_COLORS = [
+    '#0EA5E9', '#2563EB', '#7C3AED', '#D946EF',
+    '#F43F5E', '#EF4444', '#F97316', '#F59E0B',
+    '#10B981', '#22C55E', '#14B8A6', '#06B6D4',
+    '#6366F1', '#8B5CF6', '#EC4899', '#E11D48',
   ]
 
   return (
@@ -58,12 +52,15 @@ export default function AdminCategorias() {
       <div className="space-y-3">
         {categorias.sort((a, b) => (a.orden || 99) - (b.orden || 99)).map(cat => (
           <div key={cat.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
-            <div className={`w-12 h-12 ${cat.color || 'bg-sky-500'} rounded-xl flex items-center justify-center shadow-sm flex-shrink-0`}>
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0"
+              style={{ backgroundColor: cat.color || '#0EA5E9' }}
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0V5"/></svg>
             </div>
             <div className="flex-1">
               <p className="font-semibold text-slate-800">{cat.nombre}</p>
-              <p className="text-xs text-slate-400">{cat.descripcion} · Orden {cat.orden}</p>
+              <p className="text-xs text-slate-400">Orden {cat.orden} · {cat.slug}</p>
             </div>
             <div className="flex items-center gap-1">
               <button onClick={() => { setEditing(cat); setShowForm(true) }} className="p-2 text-slate-400 hover:text-sky-600" title="Editar">
@@ -83,7 +80,7 @@ export default function AdminCategorias() {
           categoria={editing}
           onSave={handleSave}
           onCancel={() => { setShowForm(false); setEditing(null) }}
-          colors={COLORS}
+          colors={PRESET_COLORS}
         />
       )}
 
@@ -92,7 +89,7 @@ export default function AdminCategorias() {
         <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
             <h3 className="text-lg font-bold text-slate-800 mb-2">¿Eliminar categoría?</h3>
-            <p className="text-sm text-slate-500 mb-6">Los artículos y eventos de esta categoría dejarán de tener categoría asignada.</p>
+            <p className="text-sm text-slate-500 mb-6">Los artículos de esta categoría se mostrarán sin categoría asignada.</p>
             <div className="flex gap-3 justify-end">
               <button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-50">Cancelar</button>
               <button onClick={() => handleDelete(deleteConfirm)} className="px-4 py-2 bg-red-500 text-white rounded-xl text-sm font-semibold hover:bg-red-600">Eliminar</button>
@@ -106,20 +103,19 @@ export default function AdminCategorias() {
 
 function CategoriaForm({ categoria, onSave, onCancel, colors }) {
   const [form, setForm] = useState({
-    id: categoria?.id || '',
     nombre: categoria?.nombre || '',
-    descripcion: categoria?.descripcion || '',
-    color: categoria?.color || 'bg-sky-500',
-    icon: categoria?.icon || 'building2',
+    slug: categoria?.slug || '',
+    color: categoria?.color || '#0EA5E9',
     orden: categoria?.orden || 99,
+    _id: categoria?._id || null,
   })
   const [error, setError] = useState('')
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return }
-    const id = form.id || form.nombre.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-    onSave({ ...form, id })
+    const slug = form.slug || form.nombre.toLowerCase().replace(/[^a-z0-9áéíóúñ]+/g, '-').replace(/(^-|-$)/g, '')
+    onSave({ ...form, slug, _id: categoria?._id || null })
   }
 
   return (
@@ -135,20 +131,25 @@ function CategoriaForm({ categoria, onSave, onCancel, colors }) {
           {error && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{error}</div>}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
-            <input type="text" value={form.nombre} onChange={e => setForm(prev => ({ ...prev, nombre: e.target.value, id: categoria ? prev.id : e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') }))}
+            <input type="text" value={form.nombre} onChange={e => {
+              const v = e.target.value
+              setForm(prev => ({ ...prev, nombre: v, slug: categoria ? prev.slug : v.toLowerCase().replace(/[^a-z0-9áéíóúñ]+/g, '-').replace(/(^-|-$)/g, '') }))
+            }}
               className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
-            <input type="text" value={form.descripcion} onChange={e => setForm(prev => ({ ...prev, descripcion: e.target.value }))}
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none" />
+            <label className="block text-sm font-medium text-slate-700 mb-1">Slug (URL)</label>
+            <input type="text" value={form.slug} onChange={e => setForm(prev => ({ ...prev, slug: e.target.value }))}
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none font-mono text-sm" />
+            <p className="text-xs text-slate-400 mt-1">Identificador único para la URL</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Color</label>
             <div className="flex flex-wrap gap-2">
               {colors.map(c => (
-                <button key={c.value} type="button" onClick={() => setForm(prev => ({ ...prev, color: c.value }))}
-                  className={`w-8 h-8 rounded-xl ${c.value} ${form.color === c.value ? 'ring-2 ring-offset-2 ring-sky-400' : 'opacity-60 hover:opacity-100'}`} title={c.label} />
+                <button key={c} type="button" onClick={() => setForm(prev => ({ ...prev, color: c }))}
+                  className={`w-8 h-8 rounded-xl ${form.color === c ? 'ring-2 ring-offset-2 ring-sky-400' : 'opacity-60 hover:opacity-100'}`}
+                  style={{ backgroundColor: c }} />
               ))}
             </div>
           </div>
@@ -157,14 +158,6 @@ function CategoriaForm({ categoria, onSave, onCancel, colors }) {
             <input type="number" value={form.orden} onChange={e => setForm(prev => ({ ...prev, orden: Number(e.target.value) }))}
               className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none" min={1} max={99} />
           </div>
-          {!categoria && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">ID (slug)</label>
-              <input type="text" value={form.id} onChange={e => setForm(prev => ({ ...prev, id: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none font-mono text-sm" />
-              <p className="text-xs text-slate-400 mt-1">Identificador único para la URL</p>
-            </div>
-          )}
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <button type="button" onClick={onCancel} className="px-6 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-semibold text-sm hover:bg-slate-50">Cancelar</button>
             <button type="submit" className="px-6 py-2.5 bg-sky-500 text-white rounded-xl font-semibold text-sm hover:bg-sky-600">

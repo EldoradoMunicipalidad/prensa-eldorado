@@ -24,7 +24,6 @@ function ArticuloForm({ articulo, categorias, onSave, onCancel }) {
 
   const handleChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }))
-    // Auto-generate slug from title
     if (field === 'titulo' && !articulo) {
       setForm(prev => ({
         ...prev,
@@ -45,11 +44,9 @@ function ArticuloForm({ articulo, categorias, onSave, onCancel }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-
     if (!form.titulo.trim()) { setError('El título es obligatorio'); return }
     if (!form.contenido.trim()) { setError('El contenido es obligatorio'); return }
     if (!form.fecha) { setError('La fecha es obligatoria'); return }
-
     setSaving(true)
     const id = await onSave({ ...form, id: articulo?.id })
     setSaving(false)
@@ -288,7 +285,7 @@ export default function AdminArticulos() {
                     {art.destacado && <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full">Destacado</span>}
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {art.fecha} · {categorias.find(c => c.id === art.categoria)?.nombre || art.categoria}
+                    {art.fecha} · {art.categoriaNombre || categorias.find(c => c.id === art.categoria)?.nombre || art.categoria}
                     {art.autor && ` · ${art.autor}`}
                   </p>
                 </div>

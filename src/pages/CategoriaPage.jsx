@@ -34,7 +34,7 @@ export default function CategoriaPage() {
     <>
       <PageHero
         titulo={categoria.nombre}
-        descripcion={categoria.descripcion}
+        descripcion={`Noticias y artículos de ${categoria.nombre}`}
       />
       <section className="max-w-7xl mx-auto px-6 py-12">
         {filtrados.length === 0 ? (

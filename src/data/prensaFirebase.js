@@ -1,63 +1,18 @@
-import {
-  doc, getDoc, getDocs, setDoc, deleteDoc, collection, query,
-  orderBy, where, onSnapshot, serverTimestamp,
-} from 'firebase/firestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { db, storage } from '../lib/firebase'
-
-// ─── DEFAULTS ────────────────────────────────────────
-const DEFAULT_CATEGORIES = [
-  { id: 'gobierno', nombre: 'Secretaría de Gobierno', descripcion: 'Gestión política y administrativa del municipio', color: 'bg-sky-500', icon: 'building2', orden: 1 },
-  { id: 'hacienda', nombre: 'Secretaría de Hacienda', descripcion: 'Finanzas, rentas y contabilidad municipal', color: 'bg-emerald-500', icon: 'landmark', orden: 2 },
-  { id: 'obras-publicas', nombre: 'Secretaría de Obras y Servicios Públicos', descripcion: 'Obras, planeamiento y servicios urbanos', color: 'bg-amber-500', icon: 'hardHat', orden: 3 },
-  { id: 'ambiente', nombre: 'Secretaría de Ambiente', descripcion: 'Gestión ambiental, parques y espacios verdes', color: 'bg-green-500', icon: 'leaf', orden: 4 },
-  { id: 'produccion', nombre: 'Secretaría de Producción', descripcion: 'Desarrollo productivo, industria y comercio', color: 'bg-violet-500', icon: 'factory', orden: 5 },
-  { id: 'accion-social', nombre: 'Secretaría de Acción Social', descripcion: 'Desarrollo social, niñez, adultos mayores', color: 'bg-rose-500', icon: 'heart', orden: 6 },
-]
-
-const DEFAULT_ADMIN = { username: 'admin', passwordHash: hashPassword('admin') }
-
-function hashPassword(str) {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i)
-    hash |= 0
-  }
-  return hash.toString(36)
-}
-
-// ─── LOCALSTORAGE FALLBACK ───────────────────────────
-const LS_KEY = 'prensa_eldorado'
-let firebaseReady = true
-
-function lsLoad() {
-  try {
-    const raw = localStorage.getItem(LS_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch (_) {}
-  return null
-}
-
-function lsSave(data) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(data)) } catch (_) {}
-}
-
-function lsInit() {
-  const existing = lsLoad()
-  if (existing) return existing
-  const initial = { categorias: DEFAULT_CATEGORIES, articulos: [], eventos: [], admins: [DEFAULT_ADMIN] }
-  lsSave(initial)
-  return initial
-}
-
-function isPermissionError(err) {
-  return err?.code === 'permission-denied' || err?.message?.includes('permission-denied')
-}
+import { directusGet, directusPost, directusPatch, directusDelete, getAssetUrl } from '../lib/directus'
+import { DIRECTUS_URL, TOKEN } from '../lib/directus'
 
 // ─── HELPERS ─────────────────────────────────────────
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+function normalizeSlug(slug) {
+  if (!slug) return ''
+  return slug.trim().replace(/\s+/g, '-').toLowerCase()
 }
+
+function extractDate(isoStr) {
+  if (!isoStr) return ''
+  return isoStr.slice(0, 10)
+}
+
+let slugToIntId = {}
 
 export function formatFecha(dateStr) {
   try {
@@ -77,218 +32,253 @@ export function formatFechaCorta(dateStr) {
   }
 }
 
-function slugify(text) {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+// ─── CATEGORÍAS ─────────────────────────────────────
+let categoriasPromise = null
+
+export async function getCategorias() {
+  if (categoriasPromise) return categoriasPromise
+  categoriasPromise = _fetchCategorias()
+  return categoriasPromise
 }
 
-// ─── CATEGORÍAS ─────────────────────────────────────
-export async function getCategorias() {
-  if (!firebaseReady) return lsInit().categorias || DEFAULT_CATEGORIES
+async function _fetchCategorias() {
   try {
-    const snap = await getDocs(query(collection(db, 'categorias'), orderBy('orden')))
-    if (snap.empty) {
-      for (const cat of DEFAULT_CATEGORIES) await setDoc(doc(db, 'categorias', cat.id), cat)
-      return DEFAULT_CATEGORIES
-    }
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    const data = await directusGet('/items/categorias?sort=sort')
+    const mapped = (data || []).map(c => {
+      const s = normalizeSlug(c.slug)
+      return {
+        id: s,
+        _id: c.id,
+        nombre: c.nombre,
+        slug: s,
+        color: c.color || '#0EA5E9',
+        descripcion: '',
+        orden: c.sort || 99,
+      }
+    })
+    // Build lookup: normalized slug → integer ID
+    mapped.forEach(c => { slugToIntId[c.id] = c._id })
+    return mapped
   } catch (e) {
-    if (isPermissionError(e)) { firebaseReady = false }
-    return lsInit().categorias || DEFAULT_CATEGORIES
+    console.warn('Error fetching categorias:', e)
+    return []
   }
 }
 
 export async function saveCategoria(cat) {
-  if (!firebaseReady) { const d = lsInit(); const idx = d.categorias.findIndex(c => c.id === cat.id); if (idx >= 0) d.categorias[idx] = cat; else d.categorias.push(cat); lsSave(d); return }
-  try { await setDoc(doc(db, 'categorias', cat.id), cat, { merge: true }) }
-  catch (e) { if (isPermissionError(e)) firebaseReady = false }
+  const data = {}
+  if (cat.nombre) data.nombre = cat.nombre
+  if (cat.slug) data.slug = cat.slug
+  if (cat.color) data.color = cat.color
+  if (cat.orden) data.sort = typeof cat.orden === 'number' ? cat.orden : 99
+  if (cat._id) {
+    await directusPatch(`/items/categorias/${cat._id}`, data)
+  } else {
+    if (!data.slug) data.slug = normalizeSlug(cat.nombre || '')
+    await directusPost('/items/categorias', data)
+  }
+  categoriasPromise = null // Force refresh
 }
 
 export async function deleteCategoria(id) {
-  if (!firebaseReady) { const d = lsInit(); d.categorias = d.categorias.filter(c => c.id !== id); lsSave(d); return }
-  try { await deleteDoc(doc(db, 'categorias', id)) }
-  catch (e) { if (isPermissionError(e)) firebaseReady = false }
+  const cats = await getCategorias()
+  const cat = cats.find(c => c.id === id)
+  if (cat && cat._id) {
+    await directusDelete(`/items/categorias/${cat._id}`)
+    categoriasPromise = null
+  }
 }
 
 export function subscribeCategorias(callback) {
-  if (!firebaseReady) { callback(lsInit().categorias || DEFAULT_CATEGORIES); return () => {} }
-  const unsub = onSnapshot(
-    query(collection(db, 'categorias'), orderBy('orden')),
-    snap => callback(snap.empty ? DEFAULT_CATEGORIES : snap.docs.map(d => ({ id: d.id, ...d.data() }))),
-    err => { if (isPermissionError(err)) { firebaseReady = false; callback(lsInit().categorias || DEFAULT_CATEGORIES) } }
-  )
-  return unsub
+  getCategorias().then(callback).catch(() => callback([]))
+  return () => {} // No-op cleanup (Directus REST, no real-time)
 }
 
 // ─── ARTÍCULOS ──────────────────────────────────────
+let articulosCache = null
+
+function mapArticulo(n) {
+  const cat = n.categoria
+  const catSlug = cat ? normalizeSlug(cat.slug) : ''
+  return {
+    id: n.id,
+    titulo: n.titulo || '',
+    slug: (n.slug || '').trim(),
+    resumen: n.resumen || '',
+    contenido: n.contenido || '',
+    autor: n.autor || 'Redacción Prensa Eldorado',
+    fecha: extractDate(n.fecha_publicacion),
+    destacado: !!n.destacada,
+    categoria: catSlug,
+    categoriaNombre: cat ? (cat.nombre || '') : '',
+    categoriaColor: cat ? (cat.color || '#0EA5E9') : '#0EA5E9',
+    imagen: getAssetUrl(n.imagen),
+    imagen2: getAssetUrl(n.imagen2),
+  }
+}
+
 export async function getArticulos(options = {}) {
-  if (!firebaseReady) return lsInit().articulos || []
   try {
-    let q = query(collection(db, 'articulos'), orderBy('fecha', 'desc'))
-    if (options.categoria) q = query(q, where('categoria', '==', options.categoria))
-    if (options.destacado) q = query(q, where('destacado', '==', true))
-    if (options.limit) q = query(q, ...(options.categoria ? [where('categoria', '==', options.categoria)] : []), orderBy('fecha', 'desc'))
+    let url = '/items/noticias?fields=*,categoria.*&sort=-fecha_publicacion'
+    if (options.limit) url += `&limit=${options.limit}`
+    if (options.categoria) {
+      // Convert slug to integer ID for Directus filter
+      const cats = await getCategorias()
+      const catIntId = slugToIntId[options.categoria]
+      if (catIntId) {
+        url += `&filter[categoria][_eq]=${catIntId}`
+      }
+    }
+    // Only published articles for the public site
+    if (!options.admin) {
+      url += `&filter[status][_eq]=published`
+    }
     
-    // Rebuild query properly for multiple conditions
-    const constraints = []
-    if (options.categoria) constraints.push(where('categoria', '==', options.categoria))
-    if (options.destacado) constraints.push(where('destacado', '==', true))
-    constraints.push(orderBy('fecha', 'desc'))
-    
-    q = query(collection(db, 'articulos'), ...constraints)
-    const snap = await getDocs(q)
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    const data = await directusGet(url)
+    let result = (data || []).map(mapArticulo)
+    articulosCache = result
+
+    if (options.destacado) {
+      result = result.filter(a => a.destacado)
+    }
+    return result
   } catch (e) {
-    if (isPermissionError(e)) { firebaseReady = false }
-    return lsInit().articulos || []
+    console.warn('Error fetching articulos:', e)
+    return []
   }
 }
 
 export async function getArticuloBySlug(slug) {
-  if (!firebaseReady) return (lsInit().articulos || []).find(a => a.slug === slug) || null
   try {
-    const q = query(collection(db, 'articulos'), where('slug', '==', slug))
-    const snap = await getDocs(q)
-    if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() }
-    return null
+    const data = await directusGet(
+      `/items/noticias?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=*,categoria.*&limit=1`
+    )
+    if (!data || data.length === 0) return null
+    const n = data[0]
+    if (n.status !== 'published') return null
+    return mapArticulo(n)
   } catch (e) {
-    if (isPermissionError(e)) firebaseReady = false
-    return (lsInit().articulos || []).find(a => a.slug === slug) || null
+    console.warn('Error fetching articulo by slug:', e)
+    return null
   }
 }
 
 export async function getArticuloById(id) {
-  if (!firebaseReady) return (lsInit().articulos || []).find(a => a.id === id) || null
   try {
-    const snap = await getDoc(doc(db, 'articulos', id))
-    if (snap.exists()) return { id: snap.id, ...snap.data() }
-    return null
+    const n = await directusGet(`/items/noticias/${id}?fields=*,categoria.*`)
+    if (!n || n.status !== 'published') return null
+    return mapArticulo(n)
   } catch (e) {
-    if (isPermissionError(e)) firebaseReady = false
-    return (lsInit().articulos || []).find(a => a.id === id) || null
+    console.warn('Error fetching articulo by id:', e)
+    return null
   }
 }
 
 export async function saveArticulo(articulo) {
-  const id = articulo.id || generateId()
   const data = {
-    ...articulo,
-    id,
-    slug: articulo.slug || slugify(articulo.titulo),
-    updatedAt: serverTimestamp(),
-    createdAt: articulo.createdAt || serverTimestamp(),
+    titulo: articulo.titulo || '',
+    slug: articulo.slug || '',
+    resumen: articulo.resumen || '',
+    contenido: articulo.contenido || '',
+    autor: articulo.autor || 'Redacción Prensa Eldorado',
+    destacada: !!articulo.destacado,
+    status: 'published',
   }
-  if (!firebaseReady) {
-    const d = lsInit()
-    const idx = d.articulos.findIndex(a => a.id === id)
-    if (idx >= 0) d.articulos[idx] = { ...data, createdAt: d.articulos[idx].createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() }
-    else d.articulos.push({ ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
-    lsSave(d)
-    return id
+  if (articulo.fecha) {
+    data.fecha_publicacion = new Date(articulo.fecha + 'T12:00:00').toISOString()
   }
-  try {
-    await setDoc(doc(db, 'articulos', id), data, { merge: true })
-    return id
-  } catch (e) {
-    if (isPermissionError(e)) firebaseReady = false
-    return null
+  // Map categoria slug → integer ID
+  if (articulo.categoria) {
+    const cats = await getCategorias()
+    const catIntId = slugToIntId[articulo.categoria]
+    if (catIntId) data.categoria = catIntId
+  }
+
+  if (articulo.id && typeof articulo.id === 'number') {
+    await directusPatch(`/items/noticias/${articulo.id}`, data)
+    return articulo.id
+  } else {
+    const result = await directusPost('/items/noticias', data)
+    articulosCache = null
+    categoriasPromise = null // refresh slug → int map
+    return result.id
   }
 }
 
 export async function deleteArticulo(id) {
-  if (!firebaseReady) { const d = lsInit(); d.articulos = d.articulos.filter(a => a.id !== id); lsSave(d); return }
-  try { await deleteDoc(doc(db, 'articulos', id)) }
-  catch (e) { if (isPermissionError(e)) firebaseReady = false }
+  await directusDelete(`/items/noticias/${id}`)
+  articulosCache = null
 }
 
 export function subscribeArticulos(callback) {
-  if (!firebaseReady) { callback(lsInit().articulos || []); return () => {} }
-  const unsub = onSnapshot(
-    query(collection(db, 'articulos'), orderBy('fecha', 'desc')),
-    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
-    err => { if (isPermissionError(err)) { firebaseReady = false; callback(lsInit().articulos || []) } }
-  )
-  return unsub
+  getArticulos().then(callback).catch(() => callback([]))
+  return () => {}
 }
 
-// ─── EVENTOS ─────────────────────────────────────────
-export async function getEventos() {
-  if (!firebaseReady) return lsInit().eventos || []
-  try {
-    const snap = await getDocs(query(collection(db, 'eventos'), orderBy('fecha', 'asc')))
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
-  } catch (e) {
-    if (isPermissionError(e)) firebaseReady = false
-    return lsInit().eventos || []
-  }
-}
-
-export async function saveEvento(evento) {
-  const id = evento.id || generateId()
-  if (!firebaseReady) {
-    const d = lsInit()
-    const idx = d.eventos.findIndex(e => e.id === id)
-    if (idx >= 0) d.eventos[idx] = { ...evento, id }
-    else d.eventos.push({ ...evento, id })
-    lsSave(d)
-    return id
-  }
-  try {
-    await setDoc(doc(db, 'eventos', id), { ...evento, id, updatedAt: serverTimestamp(), createdAt: evento.createdAt || serverTimestamp() }, { merge: true })
-    return id
-  } catch (e) {
-    if (isPermissionError(e)) firebaseReady = false
-    return null
-  }
-}
-
-export async function deleteEvento(id) {
-  if (!firebaseReady) { const d = lsInit(); d.eventos = d.eventos.filter(e => e.id !== id); lsSave(d); return }
-  try { await deleteDoc(doc(db, 'eventos', id)) }
-  catch (e) { if (isPermissionError(e)) firebaseReady = false }
-}
-
+// ─── EVENTOS (no hay en Directus) ────────────────────
+export async function getEventos() { return [] }
+export async function saveEvento(evento) { return null }
+export async function deleteEvento(id) {}
 export function subscribeEventos(callback) {
-  if (!firebaseReady) { callback(lsInit().eventos || []); return () => {} }
-  const unsub = onSnapshot(
-    query(collection(db, 'eventos'), orderBy('fecha', 'asc')),
-    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
-    err => { if (isPermissionError(err)) { firebaseReady = false; callback(lsInit().eventos || []) } }
-  )
-  return unsub
+  // Keep events in localStorage for backward compat
+  try {
+    const raw = localStorage.getItem('prensa_eldorado_eventos')
+    if (raw) callback(JSON.parse(raw))
+  } catch (_) {}
+  return () => {}
 }
 
-// ─── AUTH ────────────────────────────────────────────
+// ─── AUTH (local, unchanged) ────────────────────────
+function hashPassword(str) {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash |= 0
+  }
+  return hash.toString(36)
+}
+
 export function authenticateAdmin(username, password) {
-  const d = lsInit()
-  const admins = d.admins || [DEFAULT_ADMIN]
-  const hash = hashPassword(password)
-  return admins.some(a => a.username === username && a.passwordHash === hash)
+  try {
+    const stored = localStorage.getItem('prensa_eldorado_admin')
+    const admins = stored ? JSON.parse(stored) : [{ username: 'admin', passwordHash: hashPassword('admin') }]
+    return admins.some(a => a.username === username && a.passwordHash === hashPassword(password))
+  } catch { return false }
 }
 
 export function changeAdminPassword(username, currentPassword, newPassword) {
-  const d = lsInit()
-  const admins = d.admins || [DEFAULT_ADMIN]
-  const idx = admins.findIndex(a => a.username === username && a.passwordHash === hashPassword(currentPassword))
-  if (idx === -1) return false
-  admins[idx].passwordHash = hashPassword(newPassword)
-  d.admins = admins
-  lsSave(d)
-  return true
+  try {
+    const stored = localStorage.getItem('prensa_eldorado_admin')
+    const admins = stored ? JSON.parse(stored) : [{ username: 'admin', passwordHash: hashPassword('admin') }]
+    const idx = admins.findIndex(a => a.username === username && a.passwordHash === hashPassword(currentPassword))
+    if (idx === -1) return false
+    admins[idx].passwordHash = hashPassword(newPassword)
+    localStorage.setItem('prensa_eldorado_admin', JSON.stringify(admins))
+    return true
+  } catch { return false }
 }
 
-// ─── IMAGE UPLOAD ────────────────────────────────────
+// ─── IMAGE UPLOAD → Directus ─────────────────────────
 export async function uploadImage(file) {
-  if (!firebaseReady) return URL.createObjectURL(file)
   try {
-    const ext = file.name.split('.').pop()
-    const path = `prensa/${generateId()}.${ext}`
-    const storageRef = ref(storage, path)
-    await uploadBytes(storageRef, file)
-    return await getDownloadURL(storageRef)
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await fetch(`${DIRECTUS_URL}/files`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${TOKEN}` },
+      body: formData,
+    })
+    if (!res.ok) throw new Error(`Upload ${res.status}`)
+    const json = await res.json()
+    return getAssetUrl(json.data.id)
   } catch (e) {
-    console.warn('Upload fallback to object URL:', e)
+    console.warn('Upload fallback:', e)
     return URL.createObjectURL(file)
   }
 }
 
-export { DEFAULT_CATEGORIES, generateId, slugify }
+export function slugify(text) {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+}
+
+export { getAssetUrl }

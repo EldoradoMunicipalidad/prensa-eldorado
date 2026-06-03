@@ -1,12 +1,14 @@
 FROM node:20-alpine AS builder
 
+ARG VITE_DIRECTUS_URL=/directus
+
 WORKDIR /app
 
 COPY package*.json ./
 RUN npm ci
 
 COPY . .
-RUN npm run build
+RUN VITE_DIRECTUS_URL=${VITE_DIRECTUS_URL} npm run build
 
 FROM nginx:1.27-alpine
 

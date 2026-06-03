@@ -32,23 +32,7 @@ export function Section({ children, className = '' }) {
 }
 
 export function ArticleCard({ articulo, onClick }) {
-  const catColors = {
-    gobierno: 'bg-sky-100 text-sky-700',
-    hacienda: 'bg-emerald-100 text-emerald-700',
-    'obras-publicas': 'bg-amber-100 text-amber-700',
-    ambiente: 'bg-green-100 text-green-700',
-    produccion: 'bg-violet-100 text-violet-700',
-    'accion-social': 'bg-rose-100 text-rose-700',
-  }
-
-  const categoriaLabel = {
-    gobierno: 'Gobierno',
-    hacienda: 'Hacienda',
-    'obras-publicas': 'Obras Públicas',
-    ambiente: 'Ambiente',
-    produccion: 'Producción',
-    'accion-social': 'Acción Social',
-  }
+  const catColor = articulo.categoriaColor || '#0EA5E9'
 
   return (
     <article
@@ -66,10 +50,15 @@ export function ArticleCard({ articulo, onClick }) {
       </div>
       <div className="p-5 flex flex-col grow">
         <div className="flex items-center gap-2 mb-2">
-          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${catColors[articulo.categoria] || 'bg-slate-100 text-slate-600'}`}>
-            {categoriaLabel[articulo.categoria] || articulo.categoria}
+          <span
+            className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider text-white"
+            style={{ backgroundColor: catColor }}
+          >
+            {articulo.categoriaNombre || articulo.categoria || 'General'}
           </span>
-          <span className="text-xs text-slate-400">{articulo.fecha ? new Date(articulo.fecha + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : ''}</span>
+          <span className="text-xs text-slate-400">
+            {articulo.fecha ? new Date(articulo.fecha + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : ''}
+          </span>
         </div>
         <h3 className="text-lg font-bold text-slate-800 mb-2 line-clamp-2 leading-tight group-hover:text-sky-600 transition-colors">
           {articulo.titulo}
@@ -89,27 +78,22 @@ export function ArticleCard({ articulo, onClick }) {
 }
 
 export function EventoCard({ evento, onClick }) {
-  const catColors = {
-    gobierno: 'bg-sky-500',
-    hacienda: 'bg-emerald-500',
-    'obras-publicas': 'bg-amber-500',
-    ambiente: 'bg-green-500',
-    produccion: 'bg-violet-500',
-    'accion-social': 'bg-rose-500',
-  }
-
   return (
     <div
       onClick={onClick}
       className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-start gap-4 hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer group"
     >
       <div className="w-14 h-14 flex-shrink-0 bg-slate-50 rounded-xl flex flex-col items-center justify-center border border-slate-100">
-        <span className="text-lg font-bold text-slate-800 leading-none">{new Date(evento.fecha + 'T12:00:00').getDate()}</span>
-        <span className="text-[9px] font-semibold text-slate-400 uppercase">{new Date(evento.fecha + 'T12:00:00').toLocaleDateString('es-AR', { month: 'short' })}</span>
+        <span className="text-lg font-bold text-slate-800 leading-none">
+          {evento.fecha ? new Date(evento.fecha + 'T12:00:00').getDate() : '?'}
+        </span>
+        <span className="text-[9px] font-semibold text-slate-400 uppercase">
+          {evento.fecha ? new Date(evento.fecha + 'T12:00:00').toLocaleDateString('es-AR', { month: 'short' }) : ''}
+        </span>
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <div className={`w-2 h-2 rounded-full ${catColors[evento.categoria] || 'bg-slate-300'}`} />
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: evento.categoriaColor || '#94A3B8' }} />
           <h3 className="font-semibold text-slate-800 group-hover:text-sky-600 transition-colors truncate">{evento.titulo}</h3>
         </div>
         <p className="text-sm text-slate-500 line-clamp-1">{evento.descripcion}</p>

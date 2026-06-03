@@ -1,7 +1,29 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { subscribeCategorias } from '../../data/prensaFirebase'
+
+function FooterCategorias({ categorias }) {
+  return (
+    <ul className="space-y-2">
+      {categorias.slice(0, 8).map(cat => (
+        <li key={cat.id}>
+          <Link to={`/categoria/${cat.id}`} className="text-sm text-slate-400 hover:text-sky-400 transition-colors">
+            {cat.nombre}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  )
+}
 
 export default function Footer() {
+  const [categorias, setCategorias] = useState([])
+
+  useEffect(() => {
+    const unsub = subscribeCategorias(setCategorias)
+    return () => unsub()
+  }, [])
+
   return (
     <footer className="bg-slate-800 text-slate-300 pt-12 pb-8 px-6">
       <div className="max-w-7xl mx-auto">
@@ -25,14 +47,7 @@ export default function Footer() {
 
           <div>
             <h4 className="text-white font-bold text-sm uppercase tracking-wider mb-4">Secretarías</h4>
-            <ul className="space-y-2">
-              <li><Link to="/categoria/gobierno" className="text-sm text-slate-400 hover:text-sky-400 transition-colors">Gobierno</Link></li>
-              <li><Link to="/categoria/hacienda" className="text-sm text-slate-400 hover:text-sky-400 transition-colors">Hacienda</Link></li>
-              <li><Link to="/categoria/obras-publicas" className="text-sm text-slate-400 hover:text-sky-400 transition-colors">Obras Públicas</Link></li>
-              <li><Link to="/categoria/ambiente" className="text-sm text-slate-400 hover:text-sky-400 transition-colors">Ambiente</Link></li>
-              <li><Link to="/categoria/produccion" className="text-sm text-slate-400 hover:text-sky-400 transition-colors">Producción</Link></li>
-              <li><Link to="/categoria/accion-social" className="text-sm text-slate-400 hover:text-sky-400 transition-colors">Acción Social</Link></li>
-            </ul>
+            <FooterCategorias categorias={categorias} />
           </div>
 
           <div>

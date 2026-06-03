@@ -49,18 +49,14 @@ export default function HomePage() {
                 organizados por cada Secretaría municipal.
               </p>
               <div className="flex flex-wrap gap-3 mt-8">
-                {categorias.slice(0, 4).map(cat => (
+                {categorias.slice(0, 6).map(cat => (
                   <button
                     key={cat.id}
                     onClick={() => navigate(`/categoria/${cat.id}`)}
-                    className={`px-4 py-2 text-sm font-semibold rounded-xl border transition-all ${
-                      cat.id === 'gobierno' ? 'bg-sky-500 text-white border-sky-500 hover:bg-sky-600' :
-                      cat.id === 'obras-publicas' ? 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600' :
-                      cat.id === 'ambiente' ? 'bg-green-500 text-white border-green-500 hover:bg-green-600' :
-                      'bg-white text-slate-600 border-slate-200 hover:border-sky-300 hover:text-sky-600'
-                    }`}
+                    className="px-4 py-2 text-sm font-semibold rounded-xl border transition-all text-white border-transparent hover:opacity-80"
+                    style={{ backgroundColor: cat.color }}
                   >
-                    {cat.nombre.replace('Secretaría de ', '')}
+                    {cat.nombre}
                   </button>
                 ))}
               </div>
@@ -162,16 +158,21 @@ export default function HomePage() {
                 onClick={() => navigate(`/categoria/${cat.id}`)}
                 className="group bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all text-left flex items-center gap-4"
               >
-                <div className={`w-12 h-12 ${cat.color || 'bg-sky-500'} rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform"
+                  style={{ backgroundColor: cat.color }}
+                >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0V5" />
                   </svg>
                 </div>
                 <div>
                   <h3 className="font-semibold text-slate-800 group-hover:text-sky-600 transition-colors">
-                    {cat.nombre.replace('Secretaría de ', '')}
+                    {cat.nombre}
                   </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">{cat.descripcion}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {articulos.filter(a => a.categoria === cat.id).length} artículo{articulos.filter(a => a.categoria === cat.id).length !== 1 ? 's' : ''}
+                  </p>
                 </div>
               </button>
             ))}

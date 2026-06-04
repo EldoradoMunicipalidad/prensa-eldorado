@@ -30,59 +30,60 @@ export default function HomePage() {
   if (loading) return <LoadingSpinner />
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
       {/* ─── FEATURED ARTICLE ─── */}
       {featured && (
-        <section className="mb-8">
+        <section className="mb-6">
           <ArticleCard articulo={featured} variant="featured" onClick={() => navigate(`/articulo/${featured.slug}`)} />
         </section>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* ─── COLUMNA PRINCIPAL ─── */}
-        <div className="lg:col-span-3 space-y-8">
-
-          {/* Mixed grid: wide + regular alternados */}
+      {/* ─── ARTÍCULOS + EVENTOS SIDEBAR ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Columna principal */}
+        <div className="lg:col-span-3">
           {siguientes.length > 0 && (
             <section>
-              <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-200 pb-3">
-                <span className="w-1 h-5 bg-sky-500" style={{ borderRadius: '2px' }} />
+              <h2 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-200 pb-2.5">
+                <span className="w-1 h-4 bg-sky-500 rounded-sm" />
                 Últimas Noticias
               </h2>
 
               {siguientes.length === 0 ? (
-                <div className="text-center py-12 text-slate-400">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-3 opacity-50">
+                <div className="text-center py-10 text-slate-400">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-2 opacity-50">
                     <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0V5" />
                   </svg>
-                  <p className="font-medium">No hay artículos publicados todavía</p>
+                  <p className="font-medium text-sm">No hay artículos publicados todavía</p>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-5">
                   {/* Fila 1: wide + regular */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {siguientes[0] && (
-                      <div className="md:col-span-2">
-                        <ArticleCard articulo={siguientes[0]} variant="wide" onClick={() => navigate(`/articulo/${siguientes[0].slug}`)} />
-                      </div>
-                    )}
-                    {siguientes[1] && (
-                      <ArticleCard articulo={siguientes[1]} onClick={() => navigate(`/articulo/${siguientes[1].slug}`)} />
-                    )}
-                  </div>
+                  {siguientes.length >= 1 && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                      {siguientes[0] && (
+                        <div className="md:col-span-2">
+                          <ArticleCard articulo={siguientes[0]} variant="wide" onClick={() => navigate(`/articulo/${siguientes[0].slug}`)} />
+                        </div>
+                      )}
+                      {siguientes[1] && (
+                        <ArticleCard articulo={siguientes[1]} onClick={() => navigate(`/articulo/${siguientes[1].slug}`)} />
+                      )}
+                    </div>
+                  )}
 
                   {/* Fila 2: 3 cards regulares */}
                   {siguientes.slice(2, 5).length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                       {siguientes.slice(2, 5).map(art => (
                         <ArticleCard key={art.id} articulo={art} onClick={() => navigate(`/articulo/${art.slug}`)} />
                       ))}
                     </div>
                   )}
 
-                  {/* Fila 3: wide + regular (alternado) */}
+                  {/* Fila 3: wide + regular alternado */}
                   {siguientes.length > 5 && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                       {siguientes[5] && (
                         <ArticleCard articulo={siguientes[5]} onClick={() => navigate(`/articulo/${siguientes[5].slug}`)} />
                       )}
@@ -96,7 +97,7 @@ export default function HomePage() {
 
                   {/* Resto: grid 3 columnas */}
                   {siguientes.length > 7 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                       {siguientes.slice(7).map(art => (
                         <ArticleCard key={art.id} articulo={art} onClick={() => navigate(`/articulo/${art.slug}`)} />
                       ))}
@@ -108,12 +109,12 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* ─── SIDEBAR: solo eventos ─── */}
-        <aside className="lg:col-span-1 space-y-5">
+        {/* ─── SIDEBAR EVENTOS ─── */}
+        <aside className="lg:col-span-1">
           {proximosEventos.length > 0 && (
-            <div>
-              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2 border-b border-slate-200 pb-2">
-                <span className="w-1 h-4 bg-amber-500" style={{ borderRadius: '2px' }} />
+            <div className="lg:sticky lg:top-20">
+              <h3 className="text-xs font-bold text-slate-800 mb-3 flex items-center gap-2 border-b border-slate-200 pb-2 uppercase tracking-wider">
+                <span className="w-1 h-3 bg-amber-500 rounded-sm" />
                 Próximos Eventos
               </h3>
               <div className="space-y-2">
@@ -123,8 +124,7 @@ export default function HomePage() {
               </div>
               <button
                 onClick={() => navigate('/eventos')}
-                className="mt-3 w-full py-2 text-xs font-semibold text-sky-500 border border-sky-200 hover:bg-sky-50 transition-colors"
-                style={{ borderRadius: '5px' }}
+                className="mt-2 w-full py-2 text-xs font-semibold text-sky-500 border border-sky-200 hover:bg-sky-50 transition-colors rounded-lg"
               >
                 Ver todos →
               </button>

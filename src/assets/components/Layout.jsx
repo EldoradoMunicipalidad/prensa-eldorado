@@ -8,8 +8,7 @@ export function ArticleCard({ articulo, onClick, variant = 'default' }) {
     return (
       <article
         onClick={onClick}
-        className="group bg-white border border-slate-200 overflow-hidden flex flex-col md:flex-row hover:shadow-sm hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
-        style={{ borderRadius: '5px' }}
+        className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col md:flex-row hover:shadow-md transition-all duration-300 cursor-pointer"
       >
         <div className="md:w-[45%] w-full bg-slate-100 flex-shrink-0">
           {articulo.imagen ? (
@@ -23,8 +22,8 @@ export function ArticleCard({ articulo, onClick, variant = 'default' }) {
         <div className="flex-1 p-6 md:p-8 flex flex-col justify-center">
           <div className="flex items-center gap-3 mb-3">
             <span
-              className="text-[11px] font-bold px-2.5 py-1 text-white"
-              style={{ backgroundColor: catColor, borderRadius: '3px' }}
+              className="text-[11px] font-bold uppercase tracking-widest"
+              style={{ color: catColor }}
             >
               {articulo.categoriaNombre || articulo.categoria || 'General'}
             </span>
@@ -40,10 +39,10 @@ export function ArticleCard({ articulo, onClick, variant = 'default' }) {
               {articulo.resumen}
             </p>
           )}
-          <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-50">
             {articulo.autor && <span className="text-xs text-slate-400">Por {articulo.autor}</span>}
-            <span className="text-sm font-semibold text-sky-500 group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
-              Leer más <span>→</span>
+            <span className="inline-flex items-center bg-sky-500 text-white px-4 py-1.5 rounded-full text-xs font-bold hover:bg-sky-600 transition-colors gap-1.5">
+              Seguir Leyendo <span>→</span>
             </span>
           </div>
         </div>
@@ -56,8 +55,7 @@ export function ArticleCard({ articulo, onClick, variant = 'default' }) {
     return (
       <article
         onClick={onClick}
-        className="group bg-white border border-slate-200 overflow-hidden flex flex-col sm:flex-row hover:shadow-sm hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
-        style={{ borderRadius: '5px' }}
+        className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col sm:flex-row hover:shadow-md transition-all duration-300 cursor-pointer"
       >
         <div className="sm:w-[40%] w-full bg-slate-100 flex-shrink-0">
           {articulo.imagen ? (
@@ -71,8 +69,8 @@ export function ArticleCard({ articulo, onClick, variant = 'default' }) {
         <div className="flex-1 p-4 flex flex-col">
           <div className="flex items-center gap-2 mb-1.5">
             <span
-              className="text-[10px] font-bold px-2 py-0.5 text-white"
-              style={{ backgroundColor: catColor, borderRadius: '3px' }}
+              className="text-[10px] font-bold uppercase tracking-widest"
+              style={{ color: catColor }}
             >
               {articulo.categoriaNombre || articulo.categoria || 'General'}
             </span>
@@ -83,54 +81,54 @@ export function ArticleCard({ articulo, onClick, variant = 'default' }) {
           <h3 className="text-base font-bold text-slate-800 mb-1.5 line-clamp-2 leading-snug group-hover:text-sky-600 transition-colors">
             {articulo.titulo}
           </h3>
-          <p className="text-[13px] text-slate-500 line-clamp-2 leading-relaxed mb-2">
-            {articulo.resumen}
-          </p>
-          <span className="mt-auto text-[11px] font-semibold text-sky-500 group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-1">
-            Leer más <span>→</span>
-          </span>
+          <div className="mt-auto pt-2 flex items-center justify-between border-t border-gray-50">
+            <span className="text-[11px] text-slate-400">
+              {articulo.fecha ? new Date(articulo.fecha + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+            </span>
+            <span className="inline-flex items-center bg-sky-500 text-white px-3 py-1 rounded-full text-[10px] font-bold hover:bg-sky-600 transition-colors gap-1">
+              Seguir Leyendo <span>→</span>
+            </span>
+          </div>
         </div>
       </article>
     )
   }
 
-  // ─── DEFAULT: vertical card ───
+  // ─── DEFAULT: vertical card — diseño eldorado.gob.ar ───
   return (
     <article
       onClick={onClick}
-      className="group bg-white border border-slate-200 overflow-hidden flex flex-col hover:shadow-sm hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
-      style={{ borderRadius: '5px' }}
+      className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-all duration-300 cursor-pointer"
     >
-      <div className="h-40 w-full overflow-hidden bg-slate-100">
+      <div className="h-44 w-full overflow-hidden bg-slate-100">
         {articulo.imagen ? (
-          <img src={articulo.imagen} alt={articulo.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <img src={articulo.imagen} alt={articulo.titulo} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-slate-300">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0V5" /></svg>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0V5" />
+            </svg>
           </div>
         )}
       </div>
       <div className="p-4 flex flex-col grow">
-        <div className="flex items-center gap-2 mb-1.5">
-          <span
-            className="text-[10px] font-bold px-2 py-0.5 text-white"
-            style={{ backgroundColor: catColor, borderRadius: '3px' }}
-          >
-            {articulo.categoriaNombre || articulo.categoria || 'General'}
-          </span>
-          <span className="text-[11px] text-slate-400">
-            {articulo.fecha ? new Date(articulo.fecha + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : ''}
-          </span>
-        </div>
-        <h3 className="text-[15px] font-bold text-slate-800 mb-1.5 line-clamp-2 leading-snug group-hover:text-sky-600 transition-colors">
+        <span
+          className="text-[10px] font-bold uppercase tracking-widest mb-1"
+          style={{ color: catColor }}
+        >
+          {articulo.categoriaNombre || articulo.categoria || 'General'}
+        </span>
+        <h3 className="text-lg font-bold text-slate-800 mb-3 line-clamp-2 leading-tight">
           {articulo.titulo}
         </h3>
-        <p className="text-[13px] text-slate-500 line-clamp-2 leading-relaxed mb-2">
-          {articulo.resumen}
-        </p>
-        <span className="mt-auto text-[11px] font-semibold text-sky-500 group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-1">
-          Leer más <span>→</span>
-        </span>
+        <div className="mt-auto pt-3 flex items-center justify-between border-t border-gray-50">
+          <p className="text-xs text-gray-400 font-medium">
+            {articulo.fecha ? new Date(articulo.fecha + 'T12:00:00').toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' }) : ''}
+          </p>
+          <span className="inline-flex items-center bg-sky-500 text-white px-4 py-1.5 rounded-full text-xs font-bold hover:bg-sky-600 transition-colors gap-1.5">
+            Seguir Leyendo<span>→</span>
+          </span>
+        </div>
       </div>
     </article>
   )

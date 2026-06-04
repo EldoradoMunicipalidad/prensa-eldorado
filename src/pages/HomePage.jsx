@@ -58,9 +58,9 @@ export default function HomePage() {
                   <p className="font-medium">No hay artículos publicados todavía</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {/* Fila 1: wide + regular */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {siguientes[0] && (
                       <div className="md:col-span-2">
                         <ArticleCard articulo={siguientes[0]} variant="wide" onClick={() => navigate(`/articulo/${siguientes[0].slug}`)} />
@@ -73,7 +73,7 @@ export default function HomePage() {
 
                   {/* Fila 2: 3 cards regulares */}
                   {siguientes.slice(2, 5).length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                       {siguientes.slice(2, 5).map(art => (
                         <ArticleCard key={art.id} articulo={art} onClick={() => navigate(`/articulo/${art.slug}`)} />
                       ))}
@@ -82,7 +82,7 @@ export default function HomePage() {
 
                   {/* Fila 3: wide + regular (alternado) */}
                   {siguientes.length > 5 && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {siguientes[5] && (
                         <ArticleCard articulo={siguientes[5]} onClick={() => navigate(`/articulo/${siguientes[5].slug}`)} />
                       )}
@@ -96,7 +96,7 @@ export default function HomePage() {
 
                   {/* Resto: grid 3 columnas */}
                   {siguientes.length > 7 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                       {siguientes.slice(7).map(art => (
                         <ArticleCard key={art.id} articulo={art} onClick={() => navigate(`/articulo/${art.slug}`)} />
                       ))}

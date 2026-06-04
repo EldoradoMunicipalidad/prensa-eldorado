@@ -34,7 +34,7 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Secretarías</h4>
             <ul className="space-y-1.5">
-              {categorias.slice(0, 8).map(cat => (
+              {categorias.map(cat => (
                 <li key={cat.id}>
                   <Link to={`/categoria/${cat.id}`} className="text-xs text-slate-400 hover:text-sky-400 transition-colors">
                     {cat.nombre}

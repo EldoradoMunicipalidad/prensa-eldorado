@@ -51,7 +51,7 @@ export default function EventosPage() {
           >
             <option value="todas">Todas las categorías</option>
             {categorias.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.nombre.replace('Secretaría de ', 'Secretaría de ')}</option>
+              <option key={cat.id} value={cat.id}>{cat.nombre}</option>
             ))}
           </select>
           <div className="flex bg-white border border-slate-200 p-0.5" style={{ borderRadius: '5px' }}>

@@ -5,3 +5,4 @@ dist
 *.log
 .DS_Store
 create_github_repo.py
+spa_proxy_server.py

@@ -35,7 +35,7 @@ export function ArticleCard({ articulo, onClick, variant = 'default' }) {
             {articulo.titulo}
           </h2>
           {articulo.resumen && (
-            <p className="text-sm md:text-base text-slate-500 leading-relaxed mb-4 line-clamp-3">
+            <p className="text-sm md:text-base text-slate-500 leading-relaxed mb-4 line-clamp-4">
               {articulo.resumen}
             </p>
           )}
@@ -81,6 +81,11 @@ export function ArticleCard({ articulo, onClick, variant = 'default' }) {
           <h3 className="text-base font-bold text-slate-800 mb-1.5 line-clamp-2 leading-snug group-hover:text-sky-600 transition-colors">
             {articulo.titulo}
           </h3>
+          {articulo.resumen && (
+            <p className="text-sm text-slate-500 leading-relaxed mb-3 line-clamp-2">
+              {articulo.resumen}
+            </p>
+          )}
           <div className="mt-auto pt-2 flex items-center justify-between border-t border-gray-50">
             <span className="text-[11px] text-slate-400">
               {articulo.fecha ? new Date(articulo.fecha + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}

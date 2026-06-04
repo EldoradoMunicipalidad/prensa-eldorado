@@ -115,7 +115,7 @@ export default function Navbar() {
       {!isAdmin && categorias.length > 0 && (
         <div className="border-t border-gray-100 bg-white">
           <div className="max-w-7xl mx-auto px-6">
-            <div className="flex items-center justify-center gap-1 overflow-x-auto py-2.5 scrollbar-none whitespace-nowrap">
+            <div className="flex items-center justify-center gap-x-8 overflow-x-auto py-2.5 scrollbar-none whitespace-nowrap">
               {categorias.map(cat => (
                 <Link
                   key={cat.id}

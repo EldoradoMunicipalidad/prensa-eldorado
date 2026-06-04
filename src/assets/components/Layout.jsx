@@ -123,10 +123,15 @@ export function ArticleCard({ articulo, onClick, variant = 'default' }) {
         >
           {articulo.categoriaNombre || articulo.categoria || 'General'}
         </span>
-        <h3 className="text-lg font-bold text-slate-800 mb-3 line-clamp-2 leading-tight">
+        <h3 className="text-lg font-bold text-slate-800 mb-1 line-clamp-2 leading-tight">
           {articulo.titulo}
         </h3>
-        <div className="mt-auto pt-3 flex items-center justify-between border-t border-gray-50">
+        {articulo.resumen && (
+          <p className="text-xs text-slate-500 leading-relaxed mb-3 line-clamp-2 flex-1">
+            {articulo.resumen}
+          </p>
+        )}
+        <div className="pt-3 flex items-center justify-between border-t border-gray-50">
           <p className="text-xs text-gray-400 font-medium">
             {articulo.fecha ? new Date(articulo.fecha + 'T12:00:00').toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' }) : ''}
           </p>

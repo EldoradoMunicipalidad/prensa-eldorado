@@ -5,8 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_DIRECTUS_URL: /directus
-        VITE_DIRECTUS_PUBLIC_FOLDER_ID: ${VITE_DIRECTUS_PUBLIC_FOLDER_ID:-}
-    container_name: prensa-eldorado
-    ports:
-      - "3002:80"
+        VITE_DIRECTUS_PUBLIC_FOLDER_ID: ${VITE_DIRECTUS_PUBLIC_FOLDER_ID:?Define VITE_DIRECTUS_PUBLIC_FOLDER_ID en Dokploy}
+    expose:
+      - "80"
     restart: unless-stopped

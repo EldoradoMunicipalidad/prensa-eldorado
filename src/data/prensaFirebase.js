@@ -1,5 +1,5 @@
-import { directusGet, directusPost, directusPatch, directusDelete, getAssetUrl } from '../lib/directus'
-import { DIRECTUS_URL, TOKEN } from '../lib/directus'
+import { directusGet, directusPost, directusPatch, directusDelete, getAssetUrl, PUBLIC_ASSET_FOLDER_ID } from '../lib/directus'
+import { sanitizeArticleHtml } from '../lib/sanitizeHtml'
 
 // ─── HELPERS ─────────────────────────────────────────
 function normalizeSlug(slug) {
@@ -100,6 +100,8 @@ let articulosCache = null
 function mapArticulo(n) {
   const cat = n.categoria
   const catSlug = cat ? normalizeSlug(cat.slug) : ''
+  const imagenId = typeof n.imagen === 'object' ? (n.imagen?.id || null) : (n.imagen || null)
+  const imagen2Id = typeof n.imagen2 === 'object' ? (n.imagen2?.id || null) : (n.imagen2 || null)
   return {
     id: n.id,
     titulo: n.titulo || '',
@@ -112,8 +114,10 @@ function mapArticulo(n) {
     categoria: catSlug,
     categoriaNombre: cat ? (cat.nombre || '') : '',
     categoriaColor: cat ? (cat.color || '#0EA5E9') : '#0EA5E9',
-    imagen: getAssetUrl(n.imagen),
-    imagen2: getAssetUrl(n.imagen2),
+    imagen: getAssetUrl(imagenId),
+    imagenId,
+    imagen2: getAssetUrl(imagen2Id),
+    imagen2Id,
   }
 }
 
@@ -123,7 +127,7 @@ export async function getArticulos(options = {}) {
     if (options.limit) url += `&limit=${options.limit}`
     if (options.categoria) {
       // Convert slug to integer ID for Directus filter
-      const cats = await getCategorias()
+      await getCategorias()
       const catIntId = slugToIntId[options.categoria]
       if (catIntId) {
         url += `&filter[categoria][_eq]=${catIntId}`
@@ -179,17 +183,18 @@ export async function saveArticulo(articulo) {
     titulo: articulo.titulo || '',
     slug: articulo.slug || '',
     resumen: articulo.resumen || '',
-    contenido: articulo.contenido || '',
+    contenido: sanitizeArticleHtml(articulo.contenido || ''),
     autor: articulo.autor || 'Redacción Prensa Eldorado',
     destacada: !!articulo.destacado,
     status: 'published',
+    imagen: articulo.imagen || null,
   }
   if (articulo.fecha) {
     data.fecha_publicacion = new Date(articulo.fecha + 'T12:00:00').toISOString()
   }
   // Map categoria slug → integer ID
   if (articulo.categoria) {
-    const cats = await getCategorias()
+    await getCategorias()
     const catIntId = slugToIntId[articulo.categoria]
     if (catIntId) data.categoria = catIntId
   }
@@ -210,71 +215,90 @@ export async function deleteArticulo(id) {
   articulosCache = null
 }
 
-export function subscribeArticulos(callback) {
-  getArticulos().then(callback).catch(() => callback([]))
+export function subscribeArticulos(callback, options = {}) {
+  getArticulos(options).then(callback).catch(() => callback([]))
   return () => {}
 }
 
-// ─── EVENTOS (no hay en Directus) ────────────────────
-export async function getEventos() { return [] }
-export async function saveEvento(evento) { return null }
-export async function deleteEvento(id) {}
-export function subscribeEventos(callback) {
-  // Keep events in localStorage for backward compat
-  try {
-    const raw = localStorage.getItem('prensa_eldorado_eventos')
-    if (raw) callback(JSON.parse(raw))
-  } catch (_) {}
-  return () => {}
-}
-
-// ─── AUTH (local, unchanged) ────────────────────────
-function hashPassword(str) {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i)
-    hash |= 0
+// ─── EVENTOS ─────────────────────────────────────────
+function mapEvento(evento) {
+  const cat = evento.categoria
+  const catSlug = typeof cat === 'object' ? normalizeSlug(cat?.slug) : ''
+  const categoryId = typeof cat === 'object' ? cat?.id : cat
+  const catId = Object.keys(slugToIntId).find(slug => String(slugToIntId[slug]) === String(categoryId))
+  return {
+    id: evento.id,
+    titulo: evento.titulo || '',
+    descripcion: evento.descripcion || '',
+    fecha: extractDate(evento.fecha),
+    hora: evento.hora || '',
+    lugar: evento.lugar || '',
+    categoria: catSlug || catId || '',
+    imagen: getAssetUrl(typeof evento.imagen === 'object' ? evento.imagen?.id : evento.imagen),
+    imagenId: typeof evento.imagen === 'object' ? (evento.imagen?.id || '') : (evento.imagen || ''),
   }
-  return hash.toString(36)
 }
 
-export function authenticateAdmin(username, password) {
+export async function getEventos(options = {}) {
   try {
-    const stored = localStorage.getItem('prensa_eldorado_admin')
-    const admins = stored ? JSON.parse(stored) : [{ username: 'admin', passwordHash: hashPassword('admin') }]
-    return admins.some(a => a.username === username && a.passwordHash === hashPassword(password))
-  } catch { return false }
+    await getCategorias()
+    let url = '/items/eventos?fields=*,categoria.*&sort=fecha'
+    if (!options.admin) url += '&filter[status][_eq]=published'
+    const data = await directusGet(url)
+    return (data || []).map(mapEvento)
+  } catch (e) {
+    console.warn('Error fetching eventos:', e)
+    if (options.admin) throw e
+    return []
+  }
 }
 
-export function changeAdminPassword(username, currentPassword, newPassword) {
-  try {
-    const stored = localStorage.getItem('prensa_eldorado_admin')
-    const admins = stored ? JSON.parse(stored) : [{ username: 'admin', passwordHash: hashPassword('admin') }]
-    const idx = admins.findIndex(a => a.username === username && a.passwordHash === hashPassword(currentPassword))
-    if (idx === -1) return false
-    admins[idx].passwordHash = hashPassword(newPassword)
-    localStorage.setItem('prensa_eldorado_admin', JSON.stringify(admins))
-    return true
-  } catch { return false }
+export async function saveEvento(evento) {
+  const data = {
+    titulo: evento.titulo || '',
+    descripcion: evento.descripcion || '',
+    fecha: evento.fecha || null,
+    hora: evento.hora || null,
+    lugar: evento.lugar || '',
+    status: 'published',
+    imagen: evento.imagen || null,
+  }
+  if (evento.categoria) {
+    await getCategorias()
+    const catIntId = slugToIntId[evento.categoria]
+    if (catIntId) data.categoria = catIntId
+  } else {
+    data.categoria = null
+  }
+
+  if (evento.id) {
+    await directusPatch(`/items/eventos/${evento.id}`, data)
+    return evento.id
+  }
+  const result = await directusPost('/items/eventos', data)
+  return result.id
+}
+
+export async function deleteEvento(id) {
+  await directusDelete(`/items/eventos/${id}`)
+}
+
+export function subscribeEventos(callback, options = {}) {
+  getEventos(options).then(callback).catch(() => callback([]))
+  return () => {}
 }
 
 // ─── IMAGE UPLOAD → Directus ─────────────────────────
 export async function uploadImage(file) {
-  try {
-    const formData = new FormData()
-    formData.append('file', file)
-    const res = await fetch(`${DIRECTUS_URL}/files`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${TOKEN}` },
-      body: formData,
-    })
-    if (!res.ok) throw new Error(`Upload ${res.status}`)
-    const json = await res.json()
-    return getAssetUrl(json.data.id)
-  } catch (e) {
-    console.warn('Upload fallback:', e)
-    return URL.createObjectURL(file)
+  if (!PUBLIC_ASSET_FOLDER_ID) {
+    throw new Error('Falta configurar VITE_DIRECTUS_PUBLIC_FOLDER_ID para subir imágenes públicas.')
   }
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('folder', PUBLIC_ASSET_FOLDER_ID)
+  const result = await directusPost('/files', formData)
+  if (!result?.id) throw new Error('Directus no devolvió el identificador del archivo subido')
+  return { id: result.id, url: getAssetUrl(result.id) }
 }
 
 export function slugify(text) {

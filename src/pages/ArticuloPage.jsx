@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { subscribeArticulos, subscribeCategorias, formatFecha } from '../data/prensaFirebase'
 import { LoadingSpinner } from '../assets/components/Layout'
+import { sanitizeArticleHtml } from '../lib/sanitizeHtml'
 
 export default function ArticuloPage() {
   const { slug } = useParams()
@@ -93,7 +94,7 @@ export default function ArticuloPage() {
       )}
 
       {/* Contenido */}
-      <div className="article-content text-base leading-relaxed max-w-3xl" dangerouslySetInnerHTML={{ __html: articulo.contenido }} />
+      <div className="article-content text-base leading-relaxed max-w-3xl" dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(articulo.contenido) }} />
 
       {/* Compartir */}
       <div className="mt-10 pt-6 border-t border-slate-200">

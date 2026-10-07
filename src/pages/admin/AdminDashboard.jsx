@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { subscribeArticulos, subscribeEventos, subscribeCategorias } from '../../data/prensaFirebase'
+import { directusLogout, isDirectusAuthenticated } from '../../lib/directus'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
@@ -9,18 +10,18 @@ export default function AdminDashboard() {
   const [categorias, setCategorias] = useState([])
 
   useEffect(() => {
-    if (sessionStorage.getItem('prensa_admin_auth') !== 'true') {
+    if (!isDirectusAuthenticated()) {
       navigate('/admin')
       return
     }
-    const unsubArts = subscribeArticulos(setArticulos)
-    const unsubEves = subscribeEventos(setEventos)
+    const unsubArts = subscribeArticulos(setArticulos, { admin: true })
+    const unsubEves = subscribeEventos(setEventos, { admin: true })
     const unsubCats = subscribeCategorias(setCategorias)
     return () => { unsubArts(); unsubEves(); unsubCats() }
   }, [navigate])
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('prensa_admin_auth')
+  const handleLogout = async () => {
+    try { await directusLogout() } catch (err) { console.warn('Directus logout failed:', err) }
     navigate('/admin')
   }
 

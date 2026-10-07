@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { subscribeCategorias, saveCategoria, deleteCategoria } from '../../data/prensaFirebase'
+import { subscribeCategorias, getCategorias, saveCategoria, deleteCategoria } from '../../data/prensaFirebase'
+import { isDirectusAuthenticated } from '../../lib/directus'
 
 export default function AdminCategorias() {
   const navigate = useNavigate()
@@ -10,19 +11,21 @@ export default function AdminCategorias() {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   useEffect(() => {
-    if (sessionStorage.getItem('prensa_admin_auth') !== 'true') { navigate('/admin'); return }
+    if (!isDirectusAuthenticated()) { navigate('/admin'); return }
     const unsub = subscribeCategorias(setCategorias)
     return () => unsub()
   }, [navigate])
 
   const handleSave = async (data) => {
     await saveCategoria(data)
+    setCategorias(await getCategorias())
     setShowForm(false)
     setEditing(null)
   }
 
   const handleDelete = async (id) => {
     await deleteCategoria(id)
+    setCategorias(await getCategorias())
     setDeleteConfirm(null)
   }
 

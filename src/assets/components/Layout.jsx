@@ -151,6 +151,7 @@ export function EventoCard({ evento, onClick }) {
       className="bg-white border border-slate-200 p-3.5 flex items-start gap-3 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group"
       style={{ borderRadius: '5px' }}
     >
+      {evento.imagen && <img src={evento.imagen} alt="" className="w-12 h-12 rounded object-cover flex-shrink-0" />}
       <div className="w-10 h-10 flex-shrink-0 bg-slate-50 flex flex-col items-center justify-center border border-slate-200" style={{ borderRadius: '5px' }}>
         <span className="text-sm font-bold text-slate-800 leading-none">
           {evento.fecha ? new Date(evento.fecha + 'T12:00:00').getDate() : '?'}

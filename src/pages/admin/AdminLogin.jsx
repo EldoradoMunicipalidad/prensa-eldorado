@@ -1,32 +1,36 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { authenticateAdmin } from '../../data/prensaFirebase'
+import { directusLogin, isDirectusAuthenticated } from '../../lib/directus'
 
 export default function AdminLogin() {
   const navigate = useNavigate()
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   // Check if already authenticated
   React.useEffect(() => {
-    if (sessionStorage.getItem('prensa_admin_auth') === 'true') {
+    if (isDirectusAuthenticated()) {
       navigate('/admin/dashboard')
     }
   }, [navigate])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    if (!username.trim() || !password.trim()) {
-      setError('Completá usuario y contraseña')
+    if (!email.trim() || !password) {
+      setError('Completá correo y contraseña')
       return
     }
-    if (authenticateAdmin(username.trim(), password)) {
-      sessionStorage.setItem('prensa_admin_auth', 'true')
+    setSubmitting(true)
+    try {
+      await directusLogin(email.trim(), password)
       navigate('/admin/dashboard')
-    } else {
-      setError('Usuario o contraseña incorrectos')
+    } catch (err) {
+      setError(err.message || 'No se pudo iniciar sesión. Revisá tus credenciales y la conexión con Directus.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -47,13 +51,14 @@ export default function AdminLogin() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Usuario</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Correo electrónico</label>
               <input
-                type="text"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
                 className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all"
-                placeholder="admin"
+                placeholder="nombre@eldorado.gob.ar"
+                autoComplete="username"
                 autoFocus
               />
             </div>
@@ -65,6 +70,7 @@ export default function AdminLogin() {
                 onChange={e => setPassword(e.target.value)}
                 className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all"
                 placeholder="••••••"
+                autoComplete="current-password"
               />
             </div>
             {error && (
@@ -72,9 +78,10 @@ export default function AdminLogin() {
             )}
             <button
               type="submit"
-              className="w-full px-6 py-3 bg-sky-500 text-white rounded-xl font-semibold hover:bg-sky-600 transition-colors"
+              disabled={submitting}
+              className="w-full px-6 py-3 bg-sky-500 text-white rounded-xl font-semibold hover:bg-sky-600 transition-colors disabled:opacity-50"
             >
-              Ingresar
+              {submitting ? 'Ingresando…' : 'Ingresar'}
             </button>
           </form>
         </div>

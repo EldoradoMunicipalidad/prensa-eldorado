@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { subscribeEventos, subscribeCategorias, saveEvento, deleteEvento } from '../../data/prensaFirebase'
+import { subscribeCategorias, getEventos, saveEvento, deleteEvento, uploadImage } from '../../data/prensaFirebase'
+import { isDirectusAuthenticated } from '../../lib/directus'
 
 function EventoForm({ evento, categorias, onSave, onCancel }) {
   const [form, setForm] = useState({
@@ -10,20 +11,46 @@ function EventoForm({ evento, categorias, onSave, onCancel }) {
     hora: evento?.hora || '',
     lugar: evento?.lugar || '',
     categoria: evento?.categoria || (categorias[0]?.id || ''),
-    imagen: evento?.imagen || '',
+    imagen: evento?.imagenId || '',
   })
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
+  const [imagenPreview, setImagenPreview] = useState(evento?.imagen || '')
+  const fileInputRef = useRef(null)
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setError('')
+    setUploading(true)
+    try {
+      const uploaded = await uploadImage(file)
+      setForm(prev => ({ ...prev, imagen: uploaded.id }))
+      setImagenPreview(uploaded.url)
+    } catch (err) {
+      setError(err.message || 'No se pudo subir la imagen.')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     if (!form.titulo.trim()) { setError('El título es obligatorio'); return }
     if (!form.fecha) { setError('La fecha es obligatoria'); return }
+    if (imagenPreview && !form.imagen) { setError('Subí una imagen válida de Directus.'); return }
     setSaving(true)
-    const id = await onSave({ ...form, id: evento?.id })
-    setSaving(false)
-    if (id) onCancel()
+    try {
+      const id = await onSave({ ...form, id: evento?.id })
+      if (id) onCancel()
+    } catch (err) {
+      setError(err.message || 'No se pudo guardar el evento.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -66,6 +93,17 @@ function EventoForm({ evento, categorias, onSave, onCancel }) {
               placeholder="Salón de Actos, Palacio Municipal" />
           </div>
           <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Imagen del evento</label>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                className="px-4 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                {uploading ? 'Subiendo…' : imagenPreview ? 'Cambiar imagen' : 'Subir imagen'}
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={uploading} />
+              {imagenPreview && <img src={imagenPreview} alt="Vista previa del evento" className="w-16 h-16 rounded-lg object-cover" />}
+            </div>
+          </div>
+          <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Categoría</label>
             <select value={form.categoria} onChange={e => setForm(prev => ({ ...prev, categoria: e.target.value }))}
               className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none">
@@ -74,9 +112,9 @@ function EventoForm({ evento, categorias, onSave, onCancel }) {
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <button type="button" onClick={onCancel} className="px-6 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-semibold text-sm hover:bg-slate-50">Cancelar</button>
-            <button type="submit" disabled={saving}
+            <button type="submit" disabled={saving || uploading}
               className="px-6 py-2.5 bg-sky-500 text-white rounded-xl font-semibold text-sm hover:bg-sky-600 disabled:opacity-50 flex items-center gap-2">
-              {saving && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {(saving || uploading) && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               {evento ? 'Guardar cambios' : 'Crear evento'}
             </button>
           </div>
@@ -94,12 +132,13 @@ export default function AdminEventos() {
   const [editing, setEditing] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [filtro, setFiltro] = useState('todos')
+  const [operationError, setOperationError] = useState('')
 
   useEffect(() => {
-    if (sessionStorage.getItem('prensa_admin_auth') !== 'true') { navigate('/admin'); return }
-    const unsubEve = subscribeEventos(setEventos)
+    if (!isDirectusAuthenticated()) { navigate('/admin'); return }
+    getEventos({ admin: true }).then(setEventos).catch(err => setOperationError(err.message || 'No se pudieron cargar los eventos.'))
     const unsubCat = subscribeCategorias(setCategorias)
-    return () => { unsubEve(); unsubCat() }
+    return () => { unsubCat() }
   }, [navigate])
 
   const today = new Date().toISOString().slice(0, 10)
@@ -107,8 +146,21 @@ export default function AdminEventos() {
     : filtro === 'proximos' ? eventos.filter(e => e.fecha >= today)
     : eventos.filter(e => e.fecha < today)
 
-  const handleSave = async (data) => await saveEvento(data)
-  const handleDelete = async (id) => { await deleteEvento(id); setDeleteConfirm(null) }
+  const handleSave = async (data) => {
+    const id = await saveEvento(data)
+    setEventos(await getEventos({ admin: true }))
+    return id
+  }
+  const handleDelete = async (id) => {
+    setOperationError('')
+    try {
+      await deleteEvento(id)
+      setEventos(await getEventos({ admin: true }))
+      setDeleteConfirm(null)
+    } catch (err) {
+      setOperationError(err.message || 'No se pudo eliminar el evento.')
+    }
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
@@ -134,13 +186,15 @@ export default function AdminEventos() {
         </div>
       </div>
 
+      {operationError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{operationError}</div>}
+
       <div className="space-y-2">
         {filtrados.length === 0 ? (
           <div className="text-center py-12 text-slate-400 bg-white rounded-2xl border border-slate-100">
             <p>No hay eventos</p>
           </div>
         ) : (
-          filtrados.sort((a, b) => a.fecha.localeCompare(b.fecha)).map(ev => (
+          [...filtrados].sort((a, b) => a.fecha.localeCompare(b.fecha)).map(ev => (
             <div key={ev.id} className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
               <div className="w-12 h-12 bg-slate-50 rounded-xl flex flex-col items-center justify-center border border-slate-100 flex-shrink-0">
                 <span className="text-lg font-bold text-slate-800 leading-none">{ev.fecha ? new Date(ev.fecha + 'T12:00:00').getDate() : '?'}</span>

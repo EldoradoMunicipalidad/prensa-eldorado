@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  subscribeArticulos, subscribeCategorias,
+  subscribeArticulos, subscribeCategorias, getArticulos,
   saveArticulo, deleteArticulo, uploadImage
 } from '../../data/prensaFirebase'
+import { isDirectusAuthenticated } from '../../lib/directus'
 
 function ArticuloForm({ articulo, categorias, onSave, onCancel }) {
   const [form, setForm] = useState({
@@ -12,12 +13,13 @@ function ArticuloForm({ articulo, categorias, onSave, onCancel }) {
     contenido: articulo?.contenido || '',
     categoria: articulo?.categoria || (categorias[0]?.id || ''),
     fecha: articulo?.fecha || new Date().toISOString().slice(0, 10),
-    imagen: articulo?.imagen || '',
+    imagen: articulo?.imagenId || '',
     autor: articulo?.autor || '',
     destacado: articulo?.destacado || false,
     slug: articulo?.slug || '',
   })
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [imagenPreview, setImagenPreview] = useState(articulo?.imagen || '')
   const fileInputRef = useRef(null)
@@ -36,9 +38,18 @@ function ArticuloForm({ articulo, categorias, onSave, onCancel }) {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    setImagenPreview(URL.createObjectURL(file))
-    const url = await uploadImage(file)
-    setForm(prev => ({ ...prev, imagen: url }))
+    setError('')
+    setUploading(true)
+    try {
+      const uploaded = await uploadImage(file)
+      setForm(prev => ({ ...prev, imagen: uploaded.id }))
+      setImagenPreview(uploaded.url)
+    } catch (err) {
+      setError(err.message || 'No se pudo subir la imagen. Revisá la conexión y los permisos de Directus.')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -47,10 +58,19 @@ function ArticuloForm({ articulo, categorias, onSave, onCancel }) {
     if (!form.titulo.trim()) { setError('El título es obligatorio'); return }
     if (!form.contenido.trim()) { setError('El contenido es obligatorio'); return }
     if (!form.fecha) { setError('La fecha es obligatoria'); return }
+    if (imagenPreview && !form.imagen) {
+      setError('La imagen debe ser un archivo de Directus. Subila con el botón o pegá una URL /assets/ de Directus.')
+      return
+    }
     setSaving(true)
-    const id = await onSave({ ...form, id: articulo?.id })
-    setSaving(false)
-    if (id) onCancel()
+    try {
+      const id = await onSave({ ...form, id: articulo?.id })
+      if (id) onCancel()
+    } catch (err) {
+      setError(err.message || 'No se pudo guardar el artículo.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -142,18 +162,21 @@ function ArticuloForm({ articulo, categorias, onSave, onCancel }) {
                   onClick={() => fileInputRef.current?.click()}
                   className="px-4 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
                 >
-                  {imagenPreview ? 'Cambiar imagen' : 'Subir imagen'}
+                  {uploading ? 'Subiendo…' : imagenPreview ? 'Cambiar imagen' : 'Subir imagen'}
                 </button>
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                {form.imagen && (
-                  <input
-                    type="text"
-                    value={form.imagen}
-                    onChange={e => { handleChange('imagen', e.target.value); setImagenPreview(e.target.value) }}
-                    className="flex-1 px-4 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none"
-                    placeholder="O pegá una URL de imagen"
-                  />
-                )}
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={uploading} />
+                <input
+                  type="text"
+                  value={imagenPreview}
+                  onChange={e => {
+                    const url = e.target.value
+                    const assetId = url.match(/\/assets\/([^/?#]+)/)?.[1] || ''
+                    setForm(prev => ({ ...prev, imagen: assetId }))
+                    setImagenPreview(url)
+                  }}
+                  className="flex-1 px-4 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none"
+                  placeholder="Pegá una URL /assets/ de Directus"
+                />
               </div>
               {imagenPreview && (
                 <div className="mt-3 h-36 rounded-xl overflow-hidden bg-slate-100">
@@ -191,10 +214,10 @@ function ArticuloForm({ articulo, categorias, onSave, onCancel }) {
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || uploading}
               className="px-6 py-2.5 bg-sky-500 text-white rounded-xl font-semibold text-sm hover:bg-sky-600 disabled:opacity-50 transition-colors flex items-center gap-2"
             >
-              {saving && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {(saving || uploading) && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               {articulo ? 'Guardar cambios' : 'Publicar artículo'}
             </button>
           </div>
@@ -214,8 +237,8 @@ export default function AdminArticulos() {
   const [filtroCat, setFiltroCat] = useState('todas')
 
   useEffect(() => {
-    if (sessionStorage.getItem('prensa_admin_auth') !== 'true') { navigate('/admin'); return }
-    const unsubArt = subscribeArticulos(setArticulos)
+    if (!isDirectusAuthenticated()) { navigate('/admin'); return }
+    const unsubArt = subscribeArticulos(setArticulos, { admin: true })
     const unsubCat = subscribeCategorias(setCategorias)
     return () => { unsubArt(); unsubCat() }
   }, [navigate])
@@ -225,11 +248,14 @@ export default function AdminArticulos() {
     : articulos.filter(a => a.categoria === filtroCat)
 
   const handleSave = async (data) => {
-    return await saveArticulo(data)
+    const id = await saveArticulo(data)
+    setArticulos(await getArticulos({ admin: true }))
+    return id
   }
 
   const handleDelete = async (id) => {
     await deleteArticulo(id)
+    setArticulos(await getArticulos({ admin: true }))
     setDeleteConfirm(null)
   }
 

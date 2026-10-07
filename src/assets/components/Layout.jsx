@@ -2,13 +2,23 @@ import React from 'react'
 
 export function ArticleCard({ articulo, onClick, variant = 'default' }) {
   const catColor = articulo.categoriaColor || '#0EA5E9'
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onClick?.()
+    }
+  }
 
   // ─── FEATURED: horizontal, image left + text right ───
   if (variant === 'featured') {
     return (
       <article
         onClick={onClick}
-        className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col md:flex-row hover:shadow-md transition-all duration-300 cursor-pointer"
+        onKeyDown={handleKeyDown}
+        role="link"
+        tabIndex={0}
+        aria-label={articulo.titulo}
+        className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 md:flex-row"
       >
         <div className="md:w-[45%] w-full bg-slate-100 flex-shrink-0">
           {articulo.imagen ? (
@@ -55,7 +65,11 @@ export function ArticleCard({ articulo, onClick, variant = 'default' }) {
     return (
       <article
         onClick={onClick}
-        className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col sm:flex-row hover:shadow-md transition-all duration-300 cursor-pointer"
+        onKeyDown={handleKeyDown}
+        role="link"
+        tabIndex={0}
+        aria-label={articulo.titulo}
+        className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 sm:flex-row"
       >
         <div className="sm:w-[40%] w-full bg-slate-100 flex-shrink-0">
           {articulo.imagen ? (
@@ -103,7 +117,11 @@ export function ArticleCard({ articulo, onClick, variant = 'default' }) {
   return (
     <article
       onClick={onClick}
-      className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-all duration-300 cursor-pointer"
+      onKeyDown={handleKeyDown}
+      role="link"
+      tabIndex={0}
+      aria-label={articulo.titulo}
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
     >
       <div className="h-44 w-full overflow-hidden bg-slate-100">
         {articulo.imagen ? (
